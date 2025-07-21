@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { Heart, Cloud, MapPin, Palette, Sparkles, Star } from 'lucide-react';
+import config from './config';
 import './App.css';
 
 function App() {
@@ -23,8 +24,8 @@ function App() {
     const fetchData = async () => {
       try {
         const [colorsRes, emotionsRes] = await Promise.all([
-          axios.get('/api/colors'),
-          axios.get('/api/emotions')
+          axios.get(`${config.API_BASE_URL}/api/colors`),
+          axios.get(`${config.API_BASE_URL}/api/emotions`)
         ]);
         setAvailableColors(colorsRes.data);
         setAvailableEmotions(emotionsRes.data);
@@ -47,7 +48,7 @@ function App() {
     setLoading(true);
     
     try {
-      const response = await axios.post('/api/recommend', formData);
+      const response = await axios.post(`${config.API_BASE_URL}/api/recommend`, formData);
       setRecommendations(response.data.recommendations);
     } catch (error) {
       console.error('Error getting recommendations:', error);
