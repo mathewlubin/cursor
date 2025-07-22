@@ -1,0 +1,80 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+
+Description: DressMe AI - Serverless dress recommendation API
+
+Globals:
+  Function:
+    Timeout: 30
+    Environment:
+      Variables:
+        CORS_ORIGINS: "*"
+
+Resources:
+  DressMeAPI:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: backend/
+      Handler: lambda_handler.lambda_handler
+      Runtime: python3.9
+      MemorySize: 256
+      Description: "DressMe AI dress recommendation API"
+      Environment:
+        Variables:
+          ENV: production
+      Events:
+        CatchAll:
+          Type: Api
+          Properties:
+            Path: /{proxy+}
+            Method: ANY
+            RestApiId: !Ref DressMeApiGateway
+        Root:
+          Type: Api
+          Properties:
+            Path: /
+            Method: ANY
+            RestApiId: !Ref DressMeApiGateway
+
+  DressMeApiGateway:
+    Type: AWS::Serverless::Api
+    Properties:
+      StageName: Prod
+      Cors:
+        AllowMethods: "'GET,POST,OPTIONS'"
+        AllowHeaders: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+        AllowOrigin: "'*'"
+      DefinitionBody:
+        swagger: "2.0"
+        info:
+          title: "DressMe AI API"
+          version: "1.0"
+        paths:
+          /{proxy+}:
+            x-amazon-apigateway-any-method:
+              produces:
+                - "application/json"
+              parameters:
+                - name: "proxy"
+                  in: "path"
+                  required: true
+                  type: "string"
+              responses: {}
+              x-amazon-apigateway-integration:
+                uri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${DressMeAPI.Arn}/invocations"
+                passthroughBehavior: "when_no_match"
+                httpMethod: "POST"
+                type: "aws_proxy"
+
+Outputs:
+  DressMeAPI:
+    Description: "API Gateway endpoint URL for Prod stage"
+    Value: !Sub "https://${DressMeApiGateway}.execute-api.${AWS::Region}.amazonaws.com/Prod/"
+    Export:
+      Name: DressMeAPIEndpoint
+
+  DressMeAPIId:
+    Description: "API Gateway ID"
+    Value: !Ref DressMeApiGateway
+    Export:
+      Name: DressMeAPIId
