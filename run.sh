@@ -1,119 +1,140 @@
 #!/bin/bash
 
-echo "🚀 Starting DressMe AI Webapp..."
+# StyleMood AI - Outfit Recommender Setup and Run Script
+# =====================================================
 
-# Function to check if a command exists
-command_exists() {
-    command -v "$1" >/dev/null 2>&1
-}
+echo "🌟 Welcome to StyleMood AI - Intelligent Outfit Recommender! 🌟"
+echo ""
 
-# Check prerequisites
-echo "🔍 Checking prerequisites..."
-
-if ! command_exists python3; then
-    echo "❌ Python 3 is not installed. Please install Python 3.8 or higher."
+# Check if Python3 is available
+if ! command -v python3 &> /dev/null; then
+    echo "❌ Python3 is required but not installed. Please install Python 3.8+."
     exit 1
 fi
 
-if ! command_exists node; then
-    echo "❌ Node.js is not installed. Please install Node.js 14 or higher."
+# Check if Node.js is available
+if ! command -v node &> /dev/null; then
+    echo "❌ Node.js is required but not installed. Please install Node.js 16+."
     exit 1
 fi
 
-if ! command_exists npm; then
-    echo "❌ npm is not installed. Please install npm."
+# Check if npm is available
+if ! command -v npm &> /dev/null; then
+    echo "❌ npm is required but not installed. Please install npm."
     exit 1
 fi
 
 echo "✅ Prerequisites check passed!"
+echo ""
 
-# Function to install backend dependencies
-setup_backend() {
-    echo "🐍 Setting up Python backend..."
-    cd backend
-    
-    if [ ! -d "venv" ]; then
-        echo "📦 Creating virtual environment..."
-        python3 -m venv venv
+# Setup Backend
+echo "🐍 Setting up Backend..."
+cd backend
+
+# Install Python dependencies
+echo "Installing Python dependencies..."
+if pip3 install --break-system-packages -r requirements.txt > /dev/null 2>&1; then
+    echo "✅ Backend dependencies installed successfully!"
+else
+    echo "⚠️  Warning: Some backend dependencies might already be installed."
+fi
+
+# Test backend
+echo "Testing backend..."
+if python3 -c "import app; print('Backend test successful!')" > /dev/null 2>&1; then
+    echo "✅ Backend is ready!"
+else
+    echo "❌ Backend test failed. Please check the installation."
+    exit 1
+fi
+
+cd ..
+
+# Setup Frontend
+echo ""
+echo "⚛️  Setting up Frontend..."
+cd frontend
+
+# Install npm dependencies
+if [ ! -d "node_modules" ]; then
+    echo "Installing frontend dependencies..."
+    if npm install > /dev/null 2>&1; then
+        echo "✅ Frontend dependencies installed successfully!"
+    else
+        echo "❌ Frontend dependencies installation failed."
+        exit 1
     fi
-    
-    echo "🔧 Activating virtual environment..."
-    source venv/bin/activate
-    
-    echo "📥 Installing Python dependencies..."
-    pip install -r requirements.txt
-    
-    cd ..
-}
+else
+    echo "✅ Frontend dependencies already installed!"
+fi
 
-# Function to install frontend dependencies
-setup_frontend() {
-    echo "⚛️ Setting up React frontend..."
-    cd frontend
-    
-    if [ ! -d "node_modules" ]; then
-        echo "📥 Installing Node.js dependencies..."
-        npm install
-    fi
-    
-    cd ..
-}
+cd ..
 
-# Function to start the backend
-start_backend() {
-    echo "🚀 Starting Flask backend..."
-    cd backend
-    source venv/bin/activate
-    python app.py &
-    BACKEND_PID=$!
-    echo "Backend started with PID: $BACKEND_PID"
-    cd ..
-}
+# Start the application
+echo ""
+echo "🚀 Starting StyleMood AI Application..."
+echo ""
+echo "📍 Application URLs:"
+echo "   Frontend: http://localhost:3000"
+echo "   Backend API: http://localhost:5000"
+echo ""
+echo "🎨 Features:"
+echo "   • Complete outfit recommendations (tops, bottoms, outerwear, accessories)"
+echo "   • Emotion-based styling suggestions"
+echo "   • Weather-appropriate clothing choices"
+echo "   • Regional climate considerations"
+echo "   • Color psychology integration"
+echo ""
+echo "💡 Usage:"
+echo "   1. Select your current emotion"
+echo "   2. Choose the weather conditions"
+echo "   3. Pick your region/climate"
+echo "   4. Select your preferred color"
+echo "   5. Get personalized outfit recommendations!"
+echo ""
 
-# Function to start the frontend
-start_frontend() {
-    echo "🚀 Starting React frontend..."
-    cd frontend
-    npm start &
-    FRONTEND_PID=$!
-    echo "Frontend started with PID: $FRONTEND_PID"
-    cd ..
-}
-
-# Cleanup function
+# Function to cleanup background processes
 cleanup() {
-    echo "🛑 Shutting down servers..."
-    if [ ! -z "$BACKEND_PID" ]; then
-        kill $BACKEND_PID 2>/dev/null
-        echo "Backend stopped"
-    fi
-    if [ ! -z "$FRONTEND_PID" ]; then
-        kill $FRONTEND_PID 2>/dev/null
-        echo "Frontend stopped"
-    fi
+    echo ""
+    echo "🛑 Shutting down StyleMood AI..."
+    pkill -f "python3.*app.py"
+    pkill -f "npm.*start"
+    echo "👋 Thank you for using StyleMood AI!"
     exit 0
 }
 
-# Trap signals to cleanup when script is terminated
-trap cleanup SIGINT SIGTERM
+# Trap Ctrl+C
+trap cleanup SIGINT
 
-# Check if we need to set up dependencies
-if [ "$1" = "--setup" ] || [ ! -d "backend/venv" ] || [ ! -d "frontend/node_modules" ]; then
-    setup_backend
-    setup_frontend
+# Start backend in background
+echo "Starting backend server..."
+cd backend
+python3 app.py > backend.log 2>&1 &
+BACKEND_PID=$!
+cd ..
+
+# Wait for backend to start
+sleep 3
+
+# Check if backend is running
+if curl -s http://localhost:5000/health > /dev/null 2>&1; then
+    echo "✅ Backend server started successfully!"
+else
+    echo "⚠️  Backend server may still be starting..."
 fi
 
-# Start both servers
-start_backend
-sleep 3  # Give backend time to start
-start_frontend
-
+# Start frontend
+echo "Starting frontend server..."
+cd frontend
 echo ""
-echo "🎉 DressMe AI is now running!"
-echo "📱 Frontend: http://localhost:3000"
-echo "🔧 Backend API: http://localhost:5000"
+echo "🎨 Opening StyleMood AI in your browser..."
+echo "   If it doesn't open automatically, visit: http://localhost:3000"
 echo ""
-echo "Press Ctrl+C to stop both servers"
+echo "Press Ctrl+C to stop the application"
+echo ""
 
-# Wait for background processes
-wait
+# Start frontend (this will block)
+npm start
+
+# Cleanup when npm start exits
+cleanup

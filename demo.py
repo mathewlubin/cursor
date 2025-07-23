@@ -1,128 +1,153 @@
 #!/usr/bin/env python3
 """
-DressMe AI - Demo Script
-This script demonstrates the dress recommendation API functionality.
+StyleMood AI - Outfit Recommender Demo
+=====================================
+
+A lightweight outfit recommender that provides personalized clothing suggestions
+based on user emotion, weather conditions, region, and color preferences.
+
+Features:
+- Complete outfit recommendations (tops, bottoms, outerwear, accessories)
+- Emotion-based styling suggestions
+- Weather-appropriate clothing choices
+- Regional climate considerations
+- Color psychology integration
+- Comprehensive styling tips
+
+Usage:
+    python demo.py
 """
 
-import sys
-import os
-sys.path.append(os.path.join(os.path.dirname(__file__), 'backend'))
-
-import app
+import requests
 import json
-from flask import Flask
+import sys
+from typing import Dict, Any
 
-def demo_api():
-    """Demonstrate the DressMe AI API functionality."""
-    print("🎀 DressMe AI - API Demo")
-    print("=" * 50)
-    
-    # Create test client
-    test_app = app.app
-    client = test_app.test_client()
-    
-    # Test 1: Health Check
-    print("\n🏥 Health Check:")
-    health = client.get('/health')
-    print(f"Status: {health.get_json()['status']}")
-    
-    # Test 2: Available Options
-    print("\n🎨 Available Colors:")
-    colors = client.get('/api/colors')
-    print(", ".join(colors.get_json()))
-    
-    print("\n💭 Available Emotions:")
-    emotions = client.get('/api/emotions')
-    print(", ".join(emotions.get_json()))
-    
-    # Test 3: Different Recommendation Scenarios
-    scenarios = [
-        {
-            'name': 'Happy Beach Day',
-            'data': {'emotion': 'happy', 'weather': 'sunny', 'region': 'tropical', 'color': 'yellow'}
-        },
-        {
-            'name': 'Professional Meeting',
-            'data': {'emotion': 'professional', 'weather': 'cloudy', 'region': 'temperate', 'color': 'black'}
-        },
-        {
-            'name': 'Romantic Evening',
-            'data': {'emotion': 'romantic', 'weather': 'cold', 'region': 'cold', 'color': 'pink'}
-        },
-        {
-            'name': 'Confident Party Look',
-            'data': {'emotion': 'confident', 'weather': 'rainy', 'region': 'temperate', 'color': 'red'}
+API_BASE_URL = "http://localhost:5000"
+
+def test_api_connection():
+    """Test if the API is running and accessible."""
+    try:
+        response = requests.get(f"{API_BASE_URL}/health")
+        if response.status_code == 200:
+            print("✅ API is running successfully!")
+            return True
+        else:
+            print(f"❌ API health check failed: {response.status_code}")
+            return False
+    except requests.exceptions.ConnectionError:
+        print("❌ Cannot connect to API. Make sure the backend is running on port 5000.")
+        return False
+
+def get_available_options():
+    """Fetch available options from the API."""
+    try:
+        colors = requests.get(f"{API_BASE_URL}/api/colors").json()
+        emotions = requests.get(f"{API_BASE_URL}/api/emotions").json()
+        weather_options = requests.get(f"{API_BASE_URL}/api/weather-options").json()
+        regions = requests.get(f"{API_BASE_URL}/api/regions").json()
+        
+        return {
+            'colors': colors,
+            'emotions': emotions,
+            'weather': weather_options,
+            'regions': regions
         }
-    ]
+    except Exception as e:
+        print(f"❌ Error fetching options: {e}")
+        return None
+
+def display_outfit_recommendation(recommendation: Dict[str, Any]):
+    """Display a single outfit recommendation in a formatted way."""
+    print(f"\n🎯 Outfit #{recommendation['id']} (Confidence: {recommendation['confidence_score']}%)")
+    print("=" * 60)
     
-    for scenario in scenarios:
-        print(f"\n✨ Scenario: {scenario['name']}")
-        print("-" * 30)
-        
-        response = client.post('/api/recommend', 
-                              data=json.dumps(scenario['data']),
-                              content_type='application/json')
-        result = response.get_json()
-        
-        print(f"Input: {scenario['data']}")
-        print(f"Recommendations ({len(result['recommendations'])}):")
-        
-        for i, rec in enumerate(result['recommendations'], 1):
-            print(f"  {i}. {rec['name']}")
-            print(f"     Style: {rec['style']}")
-            print(f"     Color Mood: {rec['color_mood']}")
-            print(f"     Confidence: {rec['confidence_score']}%")
-            print(f"     Description: {rec['description']}")
-            print()
+    outfit = recommendation['outfit']
+    
+    # Display outfit items
+    print(f"👕 Top: {outfit['top'].title()}")
+    print(f"👖 Bottom: {outfit['bottom'].title()}")
+    print(f"🧥 Outerwear: {outfit['outerwear'].title()}")
+    print(f"✨ Accessories: {', '.join([acc.title() for acc in outfit['accessories']])}")
+    
+    # Display styling information
+    print(f"\n🎨 Style: {recommendation['style_description'].title()}")
+    print(f"🎭 Occasion: {recommendation['occasion_suitability'].title()}")
+    print(f"😌 Comfort Level: {recommendation['comfort_level'].title()}")
+    
+    # Display styling tips
+    print(f"\n💡 Styling Tips:")
+    for i, tip in enumerate(outfit['styling_tips'], 1):
+        print(f"   {i}. {tip}")
+    
+    # Display fabric recommendations
+    print(f"\n🧵 Recommended Fabrics: {', '.join(outfit['fabric_recommendations'])}")
+    print(f"🎨 Color Palette: {', '.join(outfit['color_palette'])}")
+    print(f"👔 Fit Guide: {outfit['fit_guide']}")
+
+def get_outfit_recommendations(user_data: Dict[str, str]):
+    """Get outfit recommendations from the API."""
+    try:
+        response = requests.post(f"{API_BASE_URL}/api/recommend", json=user_data)
+        if response.status_code == 200:
+            return response.json()
+        else:
+            print(f"❌ Error getting recommendations: {response.status_code}")
+            print(response.text)
+            return None
+    except Exception as e:
+        print(f"❌ Error calling API: {e}")
+        return None
 
 def interactive_demo():
-    """Interactive demo where user can input their preferences."""
-    print("\n🎯 Interactive Demo")
-    print("=" * 50)
+    """Run an interactive demo of the outfit recommender."""
+    print("🌟 Welcome to StyleMood AI - Your Personal Outfit Recommender! 🌟")
+    print("\nThis AI will recommend complete outfits based on your:")
+    print("• Current emotion and mood")
+    print("• Weather conditions")
+    print("• Regional climate")
+    print("• Color preferences")
+    print("\nLet's get started!\n")
     
-    test_app = app.app
-    client = test_app.test_client()
+    # Test API connection
+    if not test_api_connection():
+        return
     
     # Get available options
-    colors_response = client.get('/api/colors')
-    emotions_response = client.get('/api/emotions')
-    colors = colors_response.get_json()
-    emotions = emotions_response.get_json()
+    options = get_available_options()
+    if not options:
+        return
     
-    weather_options = ['sunny', 'rainy', 'cloudy', 'cold']
-    region_options = ['tropical', 'temperate', 'cold', 'desert']
+    # Collect user input
+    print("📝 Please provide your preferences:\n")
     
-    print("\nLet's find your perfect dress! 👗")
+    # Emotion selection
+    print(f"💭 Available emotions: {', '.join(options['emotions'])}")
+    emotion = input("How are you feeling today? ").strip().lower()
+    while emotion not in options['emotions']:
+        print(f"Please choose from: {', '.join(options['emotions'])}")
+        emotion = input("How are you feeling today? ").strip().lower()
     
-    # Get user input
-    print(f"\n1. How are you feeling? ({', '.join(emotions)})")
-    emotion = input("Enter emotion: ").lower().strip()
+    # Weather selection
+    print(f"\n🌤️ Available weather conditions: {', '.join(options['weather'])}")
+    weather = input("What's the weather like? ").strip().lower()
+    while weather not in options['weather']:
+        print(f"Please choose from: {', '.join(options['weather'])}")
+        weather = input("What's the weather like? ").strip().lower()
     
-    print(f"\n2. What's the weather like? ({', '.join(weather_options)})")
-    weather = input("Enter weather: ").lower().strip()
+    # Region selection
+    print(f"\n🌍 Available regions: {', '.join(options['regions'])}")
+    region = input("What's your region/climate? ").strip().lower()
+    while region not in options['regions']:
+        print(f"Please choose from: {', '.join(options['regions'])}")
+        region = input("What's your region/climate? ").strip().lower()
     
-    print(f"\n3. What's your region? ({', '.join(region_options)})")
-    region = input("Enter region: ").lower().strip()
-    
-    print(f"\n4. What color do you prefer? ({', '.join(colors)})")
-    color = input("Enter color: ").lower().strip()
-    
-    # Validate inputs
-    if emotion not in emotions:
-        emotion = 'happy'
-        print(f"Invalid emotion, using default: {emotion}")
-    
-    if weather not in weather_options:
-        weather = 'sunny'
-        print(f"Invalid weather, using default: {weather}")
-    
-    if region not in region_options:
-        region = 'temperate'
-        print(f"Invalid region, using default: {region}")
-    
-    if color not in colors:
-        color = 'blue'
-        print(f"Invalid color, using default: {color}")
+    # Color selection
+    print(f"\n🎨 Available colors: {', '.join(options['colors'])}")
+    color = input("What's your preferred color? ").strip().lower()
+    while color not in options['colors']:
+        print(f"Please choose from: {', '.join(options['colors'])}")
+        color = input("What's your preferred color? ").strip().lower()
     
     # Get recommendations
     user_data = {
@@ -132,39 +157,68 @@ def interactive_demo():
         'color': color
     }
     
-    response = client.post('/api/recommend', 
-                          data=json.dumps(user_data),
-                          content_type='application/json')
-    result = response.get_json()
+    print(f"\n🔍 Generating outfit recommendations for you...")
+    recommendations_data = get_outfit_recommendations(user_data)
     
-    print(f"\n🎉 Your Personalized Recommendations:")
-    print("=" * 50)
+    if not recommendations_data:
+        return
     
-    for i, rec in enumerate(result['recommendations'], 1):
-        print(f"\n{i}. ✨ {rec['name']} ✨")
-        print(f"   Style: {rec['style']}")
-        print(f"   Color Mood: {rec['color_mood']}")
-        print(f"   Regional Tips: {rec['regional_tip']}")
-        print(f"   Perfect for: {rec['weather_appropriate']} weather")
-        print(f"   Confidence Score: {rec['confidence_score']}%")
-        print(f"   Description: {rec['description']}")
+    # Display user profile
+    profile = recommendations_data['user_profile']
+    print(f"\n👤 Your Style Profile:")
+    print(f"   Emotion: {profile['emotion'].title()}")
+    print(f"   Weather: {profile['weather'].title()}")
+    print(f"   Region: {profile['region'].title()}")
+    print(f"   Color: {profile['color'].title()}")
+    print(f"   Style Preference: {profile['style_preference'].title()}")
+    
+    # Display general tips
+    print(f"\n💫 General Style Tips:")
+    for i, tip in enumerate(recommendations_data['general_tips'], 1):
+        print(f"   {i}. {tip}")
+    
+    # Display recommendations
+    print(f"\n🎉 Here are your personalized outfit recommendations:")
+    for recommendation in recommendations_data['recommendations']:
+        display_outfit_recommendation(recommendation)
+    
+    print(f"\n✨ Enjoy your stylish day! ✨")
+
+def run_sample_requests():
+    """Run sample requests to demonstrate the API."""
+    print("🧪 Running sample requests to demonstrate the outfit recommender...\n")
+    
+    sample_requests = [
+        {
+            'name': 'Professional Meeting',
+            'data': {'emotion': 'professional', 'weather': 'cloudy', 'region': 'temperate', 'color': 'navy'}
+        },
+        {
+            'name': 'Weekend Party',
+            'data': {'emotion': 'playful', 'weather': 'sunny', 'region': 'tropical', 'color': 'pink'}
+        },
+        {
+            'name': 'Romantic Date',
+            'data': {'emotion': 'romantic', 'weather': 'rainy', 'region': 'cold', 'color': 'red'}
+        }
+    ]
+    
+    for sample in sample_requests:
+        print(f"🎯 Sample: {sample['name']}")
+        print(f"Input: {sample['data']}")
+        
+        result = get_outfit_recommendations(sample['data'])
+        if result:
+            print(f"✅ Successfully generated {len(result['recommendations'])} outfit recommendations")
+            # Show just the first recommendation briefly
+            first_outfit = result['recommendations'][0]['outfit']
+            print(f"   Sample outfit: {first_outfit['top']}, {first_outfit['bottom']}, {first_outfit['outerwear']}")
+        else:
+            print("❌ Failed to get recommendations")
+        print()
 
 if __name__ == "__main__":
-    print("🌟 Welcome to DressMe AI Demo! 🌟")
-    
-    demo_api()
-    
-    print("\n" + "=" * 50)
-    
-    try:
+    if len(sys.argv) > 1 and sys.argv[1] == "--sample":
+        run_sample_requests()
+    else:
         interactive_demo()
-    except KeyboardInterrupt:
-        print("\n\nDemo interrupted. Thanks for trying DressMe AI! 👋")
-    except Exception as e:
-        print(f"\nError in interactive demo: {e}")
-        print("But the API demo above shows everything is working! ✅")
-    
-    print("\n🚀 To run the full web application:")
-    print("   ./run.sh")
-    print("   or follow instructions in SETUP.md")
-    print("\n💡 Visit http://localhost:3000 when running!")
